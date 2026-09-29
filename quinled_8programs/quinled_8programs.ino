@@ -32,8 +32,8 @@
 #include <FastLED.h>
 
 // ====== WiFi ======
-const char* WIFI_SSID     = "Chigreculturallatadezinc";
-const char* WIFI_PASSWORD = "Latadezinc1312";
+const char* WIFI_SSID     = "ВАШ_WIFI";
+const char* WIFI_PASSWORD = "ВАШ_ПАРОЛЬ";
 
 // ====== Выходы (подтверждённая физическая раскладка) ======
 #define PIN_BUS0 16
@@ -50,6 +50,10 @@ CRGB leds0[LEN_BUS0];
 CRGB leds1[LEN_BUS1];
 CRGB leds2[LEN_BUS2];
 CRGB leds3[LEN_BUS3];
+
+// Этот тип нужен для программы 1 (бегущая линия). Объявлен здесь,
+// в самом начале файла, — чтобы компилятор точно знал о нём заранее.
+struct PathStep { uint8_t edge; bool rev; };
 
 WebServer server(80);
 
@@ -135,8 +139,6 @@ unsigned long phaseStartMs = 0;
 void resetProgState() { state = 0; subState = 0; repeatCnt = 0; nextT = 0; phaseStartMs = millis(); }
 
 // ---------- Программа 1: бегущая линия ----------
-struct PathStep { uint8_t edge; bool rev; };
-
 void getColumnPath(int col, bool bottomToTop, PathStep* out) {
   const uint8_t* c = (col==0)?colL:(col==1)?colM:colR;
   for (int k=0;k<4;k++){
