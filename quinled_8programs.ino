@@ -32,8 +32,8 @@
 #include <FastLED.h>
 
 // ====== WiFi ======
-const char* WIFI_SSID     = "ВАШ_WIFI";
-const char* WIFI_PASSWORD = "ВАШ_ПАРОЛЬ";
+const char* WIFI_SSID     = "Chigreculturallatadezinc";
+const char* WIFI_PASSWORD = "Latadezinc1312";
 
 // ====== Выходы (подтверждённая физическая раскладка) ======
 #define PIN_BUS0 16
