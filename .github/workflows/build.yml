@@ -9,8 +9,7 @@ jobs:
       - run: arduino-cli core update-index
       - run: arduino-cli core install esp32:esp32
       - run: arduino-cli lib install FastLED
-      - run: mkdir -p sketch && cp quinled_8programs.ino sketch/
-      - run: arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build ./sketch
+      - run: arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build ./quinled_8programs
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
