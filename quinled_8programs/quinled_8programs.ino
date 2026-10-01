@@ -15,14 +15,18 @@
    11. Медленные линии туда и обратно (плавно)
    12. Стробоскоп (вся рама)
    13. Стробоскоп периметр (только внешний контур)
+   14. Ломаные фигуры по всей конструкции (как 4, но на всех 22 рёбрах)
+   15. Диодные фигуры, один диод на ребро (как 8, но по одной точке)
+   16. Вспышки отрезков в пол ребра (резко, угасание 1.5с, без пауз)
 
   Мастер-регуляторы на странице (действуют на ВСЁ сразу):
-   - Яркость: 0 (выкл) .. 255 (максимум, как в первой версии)
+   - Яркость: 0 (выкл) .. 255 (максимум — программный/аппаратный потолок)
    - Скорость: ползунок 0-100. В середине (50) = тайминги "по умолчанию"
      из ТЗ. Влево до 0 — почти полная остановка движения (~x0.05).
-     Вправо до 100 — ускорение максимум в 1.5 раза.
-   - Цвет: круглый цветовой регулятор (колесо), как в WLED. По умолчанию
-     после включения — красный.
+     Вправо до 100 — ускорение максимум в 2.5 раза.
+   - Цвет: круглый цветовой регулятор (колесо), как в WLED, плюс 6 кнопок
+     быстрого выбора (красный, белый, синий, зелёный, горчичный, розовый).
+     По умолчанию после включения — красный.
 
   ВАЖНО ПЕРЕД ЗАЛИВКОЙ: WIFI_SSID / WIFI_PASSWORD уже вписаны ниже
   (те же, что вы использовали в прошлой версии). Проверьте, если сеть
@@ -41,7 +45,12 @@
      рёбер (граф соединений собран автоматически по сетке). Если в
      какой-то момент направление внутри ребра будет визуально
      "перевёрнутым" относительно физической стороны — это не критично
-     для эффекта, но можно поправить через EDGE_REV при желании.
+     для эффекта, но можно поправить через EDGE_REV при желании. Теперь
+     диода два — они стартуют с разных рёбер, чтобы не совпадать.
+   - Программа 6: "сдвиг на 10 диодов" я применил только к одиночному
+     частичному ребру (там, где есть что сдвигать) — при выборе новой
+     линии её положение смещается на 10 пикселей к началу калибровки.
+     Если имелось в виду что-то другое — скажите, поправим.
 */
 
 #include <WiFi.h>
@@ -102,7 +111,7 @@ unsigned long T(unsigned long ms) { return (unsigned long)(ms / speedFactor); }
 float mapSpeed(int v) { // v: 0..100, 50 = базовая скорость (x1.0)
   if (v < 0) v = 0; if (v > 100) v = 100;
   if (v <= 50) return 0.05f + (1.0f - 0.05f) * (v / 50.0f);
-  return 1.0f + (1.5f - 1.0f) * ((v - 50) / 50.0f);
+  return 1.0f + (2.5f - 1.0f) * ((v - 50) / 50.0f);
 }
 
 // ====== Низкоуровневые функции рисования ======
@@ -164,11 +173,14 @@ void buildRect(int colMode, int rowStart, int rowEnd, uint8_t* out, uint8_t &out
 }
 
 // ====== Пул "ломаных" фигур для программы 4 (0 = конец списка) ======
-const uint8_t brokenShapes[11][5] = {
-  {9,12,15,17,16}, {18,16,14,0,0}, {1,4,6,0,0}, {2,5,7,0,0}, {3,6,9,11,0},
-  {13,16,19,0,0}, {2,5,10,0,0}, {11,14,17,20,0}, {8,11,12,0,0}, {7,10,12,0,0}, {16,19,21,0,0}
+const uint8_t brokenShapes[14][16] = {
+  {9,12,15,17,16}, {18,16,14}, {1,4,6}, {2,5,7}, {3,6,9,11},
+  {13,16,19}, {2,5,10}, {11,14,17,20}, {8,11,12}, {7,10,12}, {16,19,21},
+  {1,3,5,7,9,11,13,15,17,19,21},
+  {2,4,6,8,10,12,14,16,18,20,22},
+  {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}
 };
-const uint8_t brokenLen[11] = {5,3,3,3,4,3,3,4,3,3,3};
+const uint8_t brokenLen[14] = {5,3,3,3,4,3,3,4,3,3,3,11,11,16};
 
 // Рисует ребро "рвано" — со случайным пробелом внутри (для ломаных фигур)
 void drawJaggedEdge(int edgeNum, CRGB c) {
@@ -215,7 +227,8 @@ void buildGraph() {
 // ====================================================================
 enum Prog { P_OFF, P1_LINE, P2_PAIRS, P3_RECTS, P4_BROKEN, P5_MARCH, P6_LINES,
             P7_DOTS, P8_DOTSHAPE, P9_DOTS_CONT, P10_MOVE_DOT, P11_SLOWPAIRS,
-            P12_STROBE, P13_STROBE_PERI };
+            P12_STROBE, P13_STROBE_PERI, P14_BROKEN_ALL, P15_DOTSHAPE_SINGLE,
+            P16_HALF_SEG };
 Prog currentProg = P_OFF;
 unsigned long nextT = 0;
 int state = 0, subState = 0, repeatCnt = 0;
@@ -274,7 +287,7 @@ void prog1_line() {
     subState = 1;
   }
 
-  unsigned long dur = (state==0||state==2) ? T(5000) : T(1000);
+  unsigned long dur = (state==0||state==2) ? T(1667) : T(333); // скорость x3 от исходной
 
   if (subState == 1) {
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
@@ -321,8 +334,10 @@ void prog3_rects() {
     nextT = now + T(50); subState = 1;
   } else if (subState == 1 && now >= nextT) { clearAll(); nextT = now + T(50); subState = 2; }
   else if (subState == 2 && now >= nextT) { edgesSet(buf, len, currentColor); nextT = now + T(50); subState = 3; }
-  else if (subState == 3 && now >= nextT) { clearAll(); nextT = now + T(6000); subState = 4; }
-  else if (subState == 4 && now >= nextT) { subState = 0; }
+  else if (subState == 3 && now >= nextT) { clearAll(); nextT = now + T(50); subState = 4; }
+  else if (subState == 4 && now >= nextT) { edgesSet(buf, len, currentColor); nextT = now + T(50); subState = 5; }
+  else if (subState == 5 && now >= nextT) { clearAll(); nextT = now + T(6000); subState = 6; }
+  else if (subState == 6 && now >= nextT) { subState = 0; }
 }
 
 // ---------- Программа 4: ломаные фигуры (двойная вспышка, с пробелами) ----------
@@ -330,7 +345,7 @@ void prog4_broken() {
   unsigned long now = millis();
   static int idx;
   if (subState == 0) {
-    idx = random(0,11);
+    idx = random(0,14);
     clearAll();
     for (int k=0;k<brokenLen[idx];k++) drawJaggedEdge(brokenShapes[idx][k], currentColor);
     nextT = now + T(50); subState = 1;
@@ -356,7 +371,7 @@ void prog5_march() {
     phaseStartMs = now; nextT = now + T(200); subState = 1;
   } else if (subState == 1 && now >= nextT) { subState = 2; phaseStartMs = now; }
   else if (subState == 2) {
-    unsigned long dur = T(1000);
+    unsigned long dur = T(1600); // затухание x1.6 от исходной 1000мс
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
     uint8_t scale = 255 - (uint8_t)(255.0 * elapsed / dur);
     clearAll(); edgesSet(buf, len, scaledColor(scale));
@@ -378,16 +393,20 @@ void prog5_march() {
   }
 }
 
-// ---------- Программа 6: случайные вспышки линий (тройная вспышка) ----------
+// ---------- Программа 6: случайные вспышки линий (шестерная вспышка) ----------
 void prog6_lines() {
   unsigned long now = millis();
   static uint8_t buf[3]; static uint8_t len; static bool partial; static float pStart;
+  static int flashCount;
   if (subState == 0) {
     int mode = random(0,3); // 0=одиночное частичное ребро, 1=цепочка колонны, 2=пара ряда
     if (mode == 0) {
       const uint8_t* col = (random(0,3)==0)?colL:(random(0,2)==0?colM:colR);
       buf[0] = col[random(0,4)]; len = 1; partial = true;
-      pStart = random(0,50)/100.0;
+      int ei = buf[0]-1;
+      int elen = edgeStop[ei]-edgeStart[ei];
+      pStart = random(0,50)/100.0 - (10.0/elen); // сдвиг на 10 диодов "вверх" по калибровке
+      if (pStart < 0) pStart = 0;
     } else if (mode == 2) {
       int r = random(0,5); buf[0]=rowH[r][0]; buf[1]=rowH[r][1]; len=2; partial=false;
     } else {
@@ -397,14 +416,22 @@ void prog6_lines() {
       for (int k=0;k<chainLen;k++) buf[k]=col[s+k];
       len = chainLen; partial=false;
     }
-    nextT = now + T(200); subState = 1;
+    flashCount = 0;
+    subState = 1;
   }
-  else if (subState == 1) { clearAll(); if(partial) drawPartialEdge(buf[0],pStart,0.4,currentColor); else edgesSet(buf,len,currentColor); if(now>=nextT){nextT=now+T(80); subState=2;} }
-  else if (subState == 2 && now >= nextT) { clearAll(); nextT = now + T(200); subState = 3; }
-  else if (subState == 3) { if(partial) drawPartialEdge(buf[0],pStart,0.4,currentColor); else edgesSet(buf,len,currentColor); if(now>=nextT){nextT=now+T(80); subState=4;} }
-  else if (subState == 4 && now >= nextT) { clearAll(); nextT = now + T(200); subState = 5; phaseStartMs = now; }
+  else if (subState == 1) { // зажигаем очередную вспышку
+    if(partial) drawPartialEdge(buf[0],pStart,0.4,currentColor); else edgesSet(buf,len,currentColor);
+    nextT = now + T(80); subState = 2;
+  }
+  else if (subState == 2 && now >= nextT) { // гасим, считаем вспышки
+    clearAll();
+    flashCount++;
+    if (flashCount >= 6) { subState = 5; phaseStartMs = now; }
+    else { nextT = now + T(80); subState = 3; }
+  }
+  else if (subState == 3 && now >= nextT) { subState = 1; }
   else if (subState == 5) {
-    unsigned long dur = T(700);
+    unsigned long dur = T(1120); // затухание x1.6 от исходных 700мс
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
     uint8_t scale = 255 - (uint8_t)(255.0 * elapsed / dur);
     clearAll();
@@ -468,7 +495,7 @@ void prog8_dotshape() {
     }
     if (elapsed >= dur) { subState = 2; phaseStartMs = now; }
   } else if (subState == 2) {
-    unsigned long dur = T(800);
+    unsigned long dur = T(1280); // затухание x1.6 от исходных 800мс
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
     uint8_t scale = 255 - (uint8_t)(255.0*elapsed/dur);
     clearAll();
@@ -501,40 +528,47 @@ void prog9_dots_cont() {
   }
 }
 
-// ---------- Программа 10: движение одного диода по графу рёбер ----------
+// ---------- Программа 10: движение ДВУХ диодов по графу рёбер (независимо) ----------
 void prog10_move_dot() {
   unsigned long now = millis();
-  static int curEdge = -1, fromNode = -1, toNode = -1;
-  static uint8_t curBrightness = 255;
+  static int curEdge[2] = {-1,-1}, fromNode[2], toNode[2];
+  static uint8_t curBrightness[2];
+  static unsigned long dotStartMs[2];
 
-  if (curEdge == -1) {
-    curEdge = 1; fromNode = edgeNodeA[curEdge]; toNode = edgeNodeB[curEdge];
-    phaseStartMs = now; curBrightness = random(140,255);
+  for (int d=0; d<2; d++) {
+    if (curEdge[d] == -1) {
+      curEdge[d] = (d==0) ? 1 : 12; // стартуют с разных рёбер
+      fromNode[d] = edgeNodeA[curEdge[d]]; toNode[d] = edgeNodeB[curEdge[d]];
+      dotStartMs[d] = now; curBrightness[d] = random(140,255);
+    }
   }
 
-  unsigned long dur = T(2000);
-  unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-  float frac = (float)elapsed/dur;
-
-  int i = curEdge - 1;
-  int len = edgeStop[i]-edgeStart[i];
-  bool goForward = (fromNode == edgeNodeA[curEdge]); // fromNode=A -> двигаться A->B (start->stop)
-  int pos = goForward ? (int)(frac*len) : (int)((1-frac)*len);
   clearAll();
-  setGlobal(edgeStart[i]+pos, scaledColor(curBrightness));
 
-  if (elapsed >= dur) {
-    int node = toNode;
-    int deg = adjDegree[node];
-    if (deg > 0) {
-      int pick;
-      int tries = 0;
-      do { pick = adjEdges[node][random(0,deg)]; tries++; } while (pick == curEdge && deg>1 && tries<5);
-      int newFrom = node;
-      int newTo = (edgeNodeA[pick]==node) ? edgeNodeB[pick] : edgeNodeA[pick];
-      curEdge = pick; fromNode = newFrom; toNode = newTo;
+  for (int d=0; d<2; d++) {
+    unsigned long dur = T(2000);
+    unsigned long elapsed = now - dotStartMs[d]; if (elapsed>dur) elapsed=dur;
+    float frac = (float)elapsed/dur;
+
+    int i = curEdge[d] - 1;
+    int len = edgeStop[i]-edgeStart[i];
+    bool goForward = (fromNode[d] == edgeNodeA[curEdge[d]]);
+    int pos = goForward ? (int)(frac*len) : (int)((1-frac)*len);
+    setGlobal(edgeStart[i]+pos, scaledColor(curBrightness[d]));
+
+    if (elapsed >= dur) {
+      int node = toNode[d];
+      int deg = adjDegree[node];
+      if (deg > 0) {
+        int pick;
+        int tries = 0;
+        do { pick = adjEdges[node][random(0,deg)]; tries++; } while (pick == curEdge[d] && deg>1 && tries<5);
+        int newFrom = node;
+        int newTo = (edgeNodeA[pick]==node) ? edgeNodeB[pick] : edgeNodeA[pick];
+        curEdge[d] = pick; fromNode[d] = newFrom; toNode[d] = newTo;
+      }
+      dotStartMs[d] = now; curBrightness[d] = random(140,255);
     }
-    phaseStartMs = now; curBrightness = random(140,255);
   }
 }
 
@@ -575,6 +609,68 @@ void prog13_strobe_peri() {
   else if (subState == 1 && now >= nextT) { clearAll(); nextT = now + T(100); subState = 0; }
 }
 
+// ---------- Программа 14: ломаные фигуры по всей конструкции ----------
+void prog14_broken_all() {
+  unsigned long now = millis();
+  if (subState == 0) {
+    clearAll();
+    for (int e=1;e<=22;e++) drawJaggedEdge(e, currentColor);
+    nextT = now + T(50); subState = 1;
+  } else if (subState == 1 && now >= nextT) { clearAll(); nextT = now + T(50); subState = 2; }
+  else if (subState == 2 && now >= nextT) {
+    for (int e=1;e<=22;e++) drawJaggedEdge(e, currentColor);
+    nextT = now + T(50); subState = 3;
+  } else if (subState == 3 && now >= nextT) { clearAll(); nextT = now + T(6000); subState = 4; }
+  else if (subState == 4 && now >= nextT) { subState = 0; }
+}
+
+// ---------- Программа 15: диодные фигуры, один диод на ребро ----------
+void prog15_dotshape_single() {
+  unsigned long now = millis();
+  if (subState == 0) { phaseStartMs = now; subState = 1; }
+  if (subState == 1) {
+    unsigned long dur = T(800);
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
+    uint8_t scale = (uint8_t)(255.0*elapsed/dur);
+    clearAll();
+    for (int e=1;e<=22;e++){
+      int L = edgeStop[e-1]-edgeStart[e-1];
+      setGlobal(edgeStart[e-1] + L/2, scaledColor(scale));
+    }
+    if (elapsed >= dur) { subState = 2; phaseStartMs = now; }
+  } else if (subState == 2) {
+    unsigned long dur = T(1280);
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
+    uint8_t scale = 255 - (uint8_t)(255.0*elapsed/dur);
+    clearAll();
+    for (int e=1;e<=22;e++){
+      int L = edgeStop[e-1]-edgeStart[e-1];
+      setGlobal(edgeStart[e-1] + L/2, scaledColor(scale));
+    }
+    if (elapsed >= dur) { clearAll(); nextT = now + T(6000); subState = 3; }
+  } else if (subState == 3 && now >= nextT) { subState = 0; }
+}
+
+// ---------- Программа 16: вспышки отрезков в пол ребра, резко/угасание 1.5с, без пауз ----------
+void prog16_half_segments() {
+  unsigned long now = millis();
+  static int segEdge; static float segStart;
+  if (subState == 0) {
+    segEdge = random(1,23);
+    segStart = random(0,50)/100.0; // чтобы пол-ребра уместилось целиком
+    clearAll();
+    drawPartialEdge(segEdge, segStart, 0.5, currentColor);
+    phaseStartMs = now; subState = 1;
+  } else if (subState == 1) {
+    unsigned long dur = T(1500);
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
+    uint8_t scale = 255 - (uint8_t)(255.0*elapsed/dur);
+    clearAll();
+    drawPartialEdge(segEdge, segStart, 0.5, scaledColor(scale));
+    if (elapsed >= dur) { subState = 0; } // сразу следующий отрезок, без паузы
+  }
+}
+
 void runCurrentProgram() {
   switch (currentProg) {
     case P1_LINE: prog1_line(); break;
@@ -590,6 +686,9 @@ void runCurrentProgram() {
     case P11_SLOWPAIRS: prog11_slowpairs(); break;
     case P12_STROBE: prog12_strobe(); break;
     case P13_STROBE_PERI: prog13_strobe_peri(); break;
+    case P14_BROKEN_ALL: prog14_broken_all(); break;
+    case P15_DOTSHAPE_SINGLE: prog15_dotshape_single(); break;
+    case P16_HALF_SEG: prog16_half_segments(); break;
     default: clearAll(); break;
   }
 }
@@ -607,6 +706,7 @@ button{font-size:16px;padding:14px 8px;margin:5px;border-radius:10px;border:none
 input[type=range]{width:90%;max-width:320px}
 h3{margin-top:28px}
 #wheel{border-radius:50%;touch-action:none;margin-top:10px}
+.colorbtn{width:auto;display:inline-block;padding:10px 14px;margin:4px}
 </style></head><body>
 <h2>Управление светом</h2>
 
@@ -618,6 +718,14 @@ h3{margin-top:28px}
 
 <h3>Цвет</h3>
 <canvas id="wheel" width="220" height="220"></canvas>
+<div>
+<button class="colorbtn" onclick="setColor('FF0000')">Красный</button>
+<button class="colorbtn" onclick="setColor('FFFFFF')">Белый</button>
+<button class="colorbtn" onclick="setColor('0040FF')">Синий</button>
+<button class="colorbtn" onclick="setColor('00FF00')">Зелёный</button>
+<button class="colorbtn" onclick="setColor('CBA135')">Горчичный</button>
+<button class="colorbtn" onclick="setColor('FF1493')">Розовый</button>
+</div>
 
 <h3>Программы</h3>
 <button onclick="prog(0)">Выключить</button>
@@ -634,9 +742,13 @@ h3{margin-top:28px}
 <button onclick="prog(11)">11. Медленные линии</button>
 <button onclick="prog(12)">12. Стробоскоп</button>
 <button onclick="prog(13)">13. Строб периметр</button>
+<button onclick="prog(14)">14. Ломаные (вся рама)</button>
+<button onclick="prog(15)">15. Диодные фигуры x1</button>
+<button onclick="prog(16)">16. Отрезки в пол ребра</button>
 
 <script>
 function prog(n){ fetch('/prog?n='+n); }
+function setColor(hex){ fetch('/set?color='+hex); }
 
 // Цветовое колесо
 const cv = document.getElementById('wheel');
