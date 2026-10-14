@@ -1,56 +1,42 @@
 /*
-  QuinLED Dig-Quad — 13 световых программ + веб-управление (цвет/яркость/скорость)
-  ================================================================================
-  Программы (кнопки в браузере):
-   1. Бегущая линия (резко)
-   2. Удаление пар (резко)
-   3. Вспышки фигур (резко, двойная вспышка)
-   4. Вспышки ломаных фигур (резко, двойная вспышка)
-   5. Движение прямоугольниками и квадратами (резко + плавное угасание)
-   6. Случайные вспышки линий (тройная вспышка)
-   7. Случайные вспышки отдельных диодов (плавно, несколько одновременно)
-   8. Вспышки диодных фигур (плавно, 2 диода на ребро, все рёбра разом)
-   9. Вспышки диодов постоянные (плавно, один за другим без пауз)
-   10. Движение одного диода (медленно, по соединённым рёбрам, как в WLED)
-   11. Медленные линии туда и обратно (плавно)
-   12. Стробоскоп (вся рама)
-   13. Стробоскоп периметр (только внешний контур)
-   14. Ломаные фигуры по всей конструкции (как 4, но на всех 22 рёбрах)
-   15. Диодные фигуры, один диод на ребро (как 8, но по одной точке)
-   16. Вспышки отрезков в пол ребра (резко, угасание 1.5с, без пауз)
+  QuinLED Dig-Quad — 18 кнопок: 2 комбо + 16 световых программ, веб-управление (цвет/яркость/скорость)
+  ===========================================================================================
+  Порядок кнопок на странице (сверху вниз — от спокойных к интенсивным):
+   1. Комбо: бегущая линия + удаление пар (ф1 линии, ф2 линии, ф1 пар, ф3 линии, ф4 линии, ф2 пар)
+   2. Комбо: вспышки фигур + марш (случайно: двойная резкая/быстрое затухание или резкая/медленное)
+   3. Движение диодов (два диода + вспышка периметра раз в 6 с)
+   4. Случайные диоды
+   5. Медленные линии (отрезок в пол ребра едет по линии за 0.8 с)
+   6. Диодные фигуры (точки медленно расползаются во время вспышки)
+   7. Диодные фигуры x1 (по одному диоду на ребро)
+   8. Периметр с затуханием
+   9. Отрезки в пол ребра
+  10. Марш фигур
+  11. Бегущая линия
+  12. Удаление пар (ф1 — пары, ф2 — по одному ребру, чередуются)
+  13. Случайные линии
+  14. Вспышки фигур
+  15. Ломаные фигуры
+  16. Ломаные (вся рама)
+  17. Строб периметр
+  18. Стробоскоп
 
   Мастер-регуляторы на странице (действуют на ВСЁ сразу):
-   - Яркость: 0 (выкл) .. 255 (максимум — программный/аппаратный потолок)
-   - Скорость: ползунок 0-100. В середине (50) = тайминги "по умолчанию"
-     из ТЗ. Влево до 0 — почти полная остановка движения (~x0.05).
-     Вправо до 100 — ускорение максимум в 2.5 раза.
-   - Цвет: круглый цветовой регулятор (колесо), как в WLED, плюс 6 кнопок
-     быстрого выбора (красный, белый, синий, зелёный, горчичный, розовый).
-     По умолчанию после включения — красный.
+   - Яркость: 0 (выкл) .. 255 (максимум)
+   - Скорость: ползунок 0-100. В середине (50) = тайминги "по умолчанию".
+     Влево до 0 — почти полная остановка (~x0.05). Вправо до 100 — x2.5.
+   - Цвет: круглое колесо + 6 кнопок быстрого выбора. По умолчанию — красный.
 
-  ВАЖНО ПЕРЕД ЗАЛИВКОЙ: WIFI_SSID / WIFI_PASSWORD уже вписаны ниже
-  (те же, что вы использовали в прошлой версии). Проверьте, если сеть
-  сменилась.
-
-  ПОСЛЕ ПЕРВОГО ЗАПУСКА ПРОВЕРЬТЕ (я делал разумные предположения там,
-  где в ТЗ было неоднозначно — если что-то выглядит не так, скажите мне
-  какой пункт и как должно быть, поправим):
-   - Программа 1: если движение по какому-то ребру идёт "задом наперёд" —
-     переключите нужный флаг в EDGE_REV (true/false) и перезалейте.
-   - Программа 5: я скомпоновал фазу 1 как маршевое движение
-     полноширинных прямоугольников по рядам вверх/вниз, а фазу 2 —
-     как маленькие квадраты, идущие справа-налево на каждом ряду,
-     тоже вверх/вниз.
-   - Программа 10: диод "путешествует" по случайному связному маршруту
-     рёбер (граф соединений собран автоматически по сетке). Если в
-     какой-то момент направление внутри ребра будет визуально
-     "перевёрнутым" относительно физической стороны — это не критично
-     для эффекта, но можно поправить через EDGE_REV при желании. Теперь
-     диода два — они стартуют с разных рёбер, чтобы не совпадать.
-   - Программа 6: "сдвиг на 10 диодов" я применил только к одиночному
-     частичному ребру (там, где есть что сдвигать) — при выборе новой
-     линии её положение смещается на 10 пикселей к началу калибровки.
-     Если имелось в виду что-то другое — скажите, поправим.
+  ПОСЛЕ ЗАПУСКА ПРОВЕРЬТЕ (разумные предположения там, где ТЗ допускало варианты):
+   - Программа 5 (Медленные линии): направление отрезка по каждому ребру
+     определено автоматически по цепочке подключения (таблица EDGE_PIX_BA).
+     Для рёбер 8 и 15 (концы перемычек) значение по умолчанию. Если на
+     каком-то ряду отрезок едет не в ту сторону — скажите ряд.
+   - Программа 3 (Движение диодов): диодов два; периметр вспыхивает раз в 6 с.
+   - Программа 6 (Диодные фигуры): каждая точка уползает на 10-15 пикселей
+     в случайную сторону вдоль своего ребра.
+   - Программа 13 (Случайные линии): "сдвиг на 10 диодов" применён к
+     одиночному частичному ребру.
 */
 
 #include <WiFi.h>
@@ -225,16 +211,18 @@ void buildGraph() {
 // ====================================================================
 // ПРОГРАММЫ
 // ====================================================================
-enum Prog { P_OFF, P1_LINE, P2_PAIRS, P3_RECTS, P4_BROKEN, P5_MARCH, P6_LINES,
-            P7_DOTS, P8_DOTSHAPE, P9_DOTS_CONT, P10_MOVE_DOT, P11_SLOWPAIRS,
-            P12_STROBE, P13_STROBE_PERI, P14_BROKEN_ALL, P15_DOTSHAPE_SINGLE,
-            P16_HALF_SEG };
+enum Prog { P_OFF, P_COMBO12, P_COMBO35, P10_MOVE_DOT, P7_DOTS, P11_SLOWPAIRS,
+            P8_DOTSHAPE, P15_DOTSHAPE_SINGLE, P_PERI_FADE, P16_HALF_SEG, P5_MARCH,
+            P1_LINE, P2_PAIRS, P6_LINES, P3_RECTS, P4_BROKEN, P14_BROKEN_ALL,
+            P13_STROBE_PERI, P12_STROBE };
+#define PROG_COUNT 18   // кнопки 1..18, 0 = выключить
 Prog currentProg = P_OFF;
 unsigned long nextT = 0;
 int state = 0, subState = 0, repeatCnt = 0;
 unsigned long phaseStartMs = 0;
 
-void resetProgState() { state = 0; subState = 0; repeatCnt = 0; nextT = 0; phaseStartMs = millis(); }
+int p2idx = 0; // номер текущей вспышки внутри фазы пресета "Удаление пар"
+void resetProgState() { state = 0; subState = 0; repeatCnt = 0; nextT = 0; p2idx = 0; phaseStartMs = millis(); }
 
 // ---------- Программа 1: бегущая линия ----------
 void getColumnPath(int col, bool bottomToTop, PathStep* out) {
@@ -266,19 +254,20 @@ void drawMovingWindow(PathStep* path, int steps, float frac) {
   }
 }
 
-void prog1_line() {
+// ph: 0..3 = фазы 1..4. Возвращает true, когда фаза отработала 3 раза (с паузами по 5 с).
+bool prog1_phase(int ph) {
   unsigned long now = millis();
   static PathStep path1[12]; static PathStep pathC[3][4];
+  bool longMode = (ph==0 || ph==2);
 
   if (subState == 0) {
-    if (state==0 || state==2) {
-      bool up = (state==0);
+    bool up = (ph < 2);
+    if (longMode) {
       PathStep tmp[4];
       getColumnPath(0, up, tmp); for(int i=0;i<4;i++) path1[i]=tmp[i];
       getColumnPath(1, up, tmp); for(int i=0;i<4;i++) path1[4+i]=tmp[i];
       getColumnPath(2, up, tmp); for(int i=0;i<4;i++) path1[8+i]=tmp[i];
     } else {
-      bool up = (state==1);
       getColumnPath(0, up, pathC[0]);
       getColumnPath(1, up, pathC[1]);
       getColumnPath(2, up, pathC[2]);
@@ -287,13 +276,13 @@ void prog1_line() {
     subState = 1;
   }
 
-  unsigned long dur = (state==0||state==2) ? T(1667) : T(333); // скорость x3 от исходной
+  unsigned long dur = longMode ? T(1667) : T(333); // скорость x3 от исходной
 
   if (subState == 1) {
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
     float frac = (float)elapsed/dur;
     clearAll();
-    if (state==0 || state==2) {
+    if (longMode) {
       drawMovingWindow(path1, 12, frac);
     } else {
       for (int c=0;c<3;c++) drawMovingWindow(pathC[c], 4, frac);
@@ -302,24 +291,38 @@ void prog1_line() {
   } else if (subState == 2) {
     if (now >= nextT) {
       repeatCnt++;
-      if (repeatCnt >= 3) { repeatCnt = 0; state = (state+1)%4; }
       subState = 0;
+      if (repeatCnt >= 3) { repeatCnt = 0; return true; }
     }
   }
+  return false;
 }
+
+void prog1_line() { if (prog1_phase(state)) state = (state+1) % 4; }
 
 // ---------- Программа 2: удаление пар (резко) ----------
 const uint8_t pairSeq[5][2] = {{21,22},{16,17},{11,12},{6,7},{1,2}};
-void prog2_pairs() {
+const uint8_t singleSeq[10] = {21,22,16,17,11,12,6,7,1,2};
+// ph 0: пары рёбер по 0.2 с; ph 1: по одному ребру по 0.1 с (вся фаза ~1 с).
+// Возвращает true, когда фаза закончилась (включая паузу 6 с).
+bool prog2_phase(int ph) {
   unsigned long now = millis();
-  if (subState == 0) { clearAll(); edgesSet(pairSeq[state], 2, currentColor); nextT = now + T(200); subState = 1; }
-  else if (subState == 1 && now >= nextT) {
+  int total = (ph == 0) ? 5 : 10;
+  unsigned long flashMs = (ph == 0) ? T(200) : T(100);
+  if (subState == 0) {
     clearAll();
-    state++;
-    if (state >= 5) { state = 0; nextT = now + T(6000); subState = 2; }
-    else { subState = 0; }
-  } else if (subState == 2 && now >= nextT) { subState = 0; }
+    if (ph == 0) edgesSet(pairSeq[p2idx], 2, currentColor); else edgeSet(singleSeq[p2idx], currentColor);
+    nextT = now + flashMs; subState = 1;
+  } else if (subState == 1 && now >= nextT) {
+    clearAll();
+    p2idx++;
+    if (p2idx >= total) { p2idx = 0; nextT = now + T(6000); subState = 2; }
+    else subState = 0;
+  } else if (subState == 2 && now >= nextT) { subState = 0; return true; }
+  return false;
 }
+
+void prog2_pairs() { if (prog2_phase(state)) state = 1 - state; }
 
 // ---------- Программа 3: случайные вспышки фигур (двойная вспышка) ----------
 void prog3_rects() {
@@ -479,61 +482,47 @@ void prog7_dots() {
   }
 }
 
-// ---------- Программа 8: вспышки диодных фигур (2 точки на ребро, все рёбра) ----------
+// ---------- Программа 8: диодные фигуры (2 точки на ребро), точки медленно расползаются ----------
+int8_t d8dir[23][2]; uint8_t d8dist[23][2];
+void drawDots8(uint8_t scale, float prog) {
+  clearAll();
+  CRGB c = scaledColor(scale);
+  for (int e=1;e<=22;e++){
+    int s = edgeStart[e-1], L = edgeStop[e-1]-s;
+    int base[2] = { L/3, (2*L)/3 };
+    for (int k=0;k<2;k++) {
+      int p = base[k] + (int)(d8dir[e][k] * d8dist[e][k] * prog);
+      if (p < 0) p = 0;
+      if (p > L-1) p = L-1;
+      setGlobal(s + p, c);
+    }
+  }
+}
 void prog8_dotshape() {
   unsigned long now = millis();
-  if (subState == 0) { phaseStartMs = now; subState = 1; }
+  unsigned long rise = T(800), fall = T(1280);
+  if (subState == 0) {
+    for (int e=1;e<=22;e++) for (int k=0;k<2;k++) { d8dir[e][k] = random(0,2) ? 1 : -1; d8dist[e][k] = random(10,16); }
+    phaseStartMs = now; subState = 1;
+  }
   if (subState == 1) {
-    unsigned long dur = T(800);
-    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    uint8_t scale = (uint8_t)(255.0*elapsed/dur);
-    clearAll();
-    for (int e=1;e<=22;e++){
-      int L = edgeStop[e-1]-edgeStart[e-1];
-      setGlobal(edgeStart[e-1] + L/3, scaledColor(scale));
-      setGlobal(edgeStart[e-1] + (2*L)/3, scaledColor(scale));
-    }
-    if (elapsed >= dur) { subState = 2; phaseStartMs = now; }
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>rise) elapsed=rise;
+    drawDots8((uint8_t)(255.0*elapsed/rise), (float)elapsed/(rise+fall));
+    if (elapsed >= rise) { subState = 2; phaseStartMs = now; }
   } else if (subState == 2) {
-    unsigned long dur = T(1280); // затухание x1.6 от исходных 800мс
-    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    uint8_t scale = 255 - (uint8_t)(255.0*elapsed/dur);
-    clearAll();
-    for (int e=1;e<=22;e++){
-      int L = edgeStop[e-1]-edgeStart[e-1];
-      setGlobal(edgeStart[e-1] + L/3, scaledColor(scale));
-      setGlobal(edgeStart[e-1] + (2*L)/3, scaledColor(scale));
-    }
-    if (elapsed >= dur) { clearAll(); nextT = now + T(6000); subState = 3; }
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>fall) elapsed=fall;
+    drawDots8(255 - (uint8_t)(255.0*elapsed/fall), (float)(rise+elapsed)/(rise+fall));
+    if (elapsed >= fall) { clearAll(); nextT = now + T(6000); subState = 3; }
   } else if (subState == 3 && now >= nextT) { subState = 0; }
 }
 
-// ---------- Программа 9: вспышки диодов постоянные (без пауз) ----------
-void prog9_dots_cont() {
-  unsigned long now = millis();
-  static int dotIdx; static uint8_t br;
-  if (subState == 0) { dotIdx = random(0,TOTAL_LEDS); br = random(120,255); phaseStartMs = now; subState = 1; }
-  if (subState == 1) {
-    unsigned long dur = T(400);
-    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    float frac = (float)elapsed/dur;
-    clearAll(); setGlobal(dotIdx, scaledColor((uint8_t)(br*frac)));
-    if (elapsed >= dur) { subState = 2; phaseStartMs = now; }
-  } else if (subState == 2) {
-    unsigned long dur = T(400);
-    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    float frac = (float)elapsed/dur;
-    clearAll(); setGlobal(dotIdx, scaledColor((uint8_t)(br*(1-frac))));
-    if (elapsed >= dur) { subState = 0; } // сразу следующий диод, без паузы
-  }
-}
-
-// ---------- Программа 10: движение ДВУХ диодов по графу рёбер (независимо) ----------
+// ---------- Программа 10: два диода + вспышка периметра раз в 6 с ----------
 void prog10_move_dot() {
   unsigned long now = millis();
   static int curEdge[2] = {-1,-1}, fromNode[2], toNode[2];
   static uint8_t curBrightness[2];
   static unsigned long dotStartMs[2];
+  static unsigned long perimStart = 0;
 
   for (int d=0; d<2; d++) {
     if (curEdge[d] == -1) {
@@ -544,6 +533,15 @@ void prog10_move_dot() {
   }
 
   clearAll();
+
+  // Вспышка периметра: 0.8 с нарастание + 0.8 с спад (как в "Медленных линиях"), цикл 6 с
+  unsigned long cyc = T(6000), rise = T(800);
+  if (perimStart == 0 || now - perimStart >= cyc) perimStart = now;
+  unsigned long pe = now - perimStart;
+  float pk = 0;
+  if (pe < rise) pk = (float)pe / rise;
+  else if (pe < 2*rise) pk = 1.0 - (float)(pe - rise) / rise;
+  if (pk > 0) edgesSet(perimeterEdges, 12, scaledColor((uint8_t)(255*pk)));
 
   for (int d=0; d<2; d++) {
     unsigned long dur = T(2000);
@@ -572,24 +570,42 @@ void prog10_move_dot() {
   }
 }
 
-// ---------- Программа 11: медленные линии туда и обратно ----------
+// ---------- Программа 11: медленные линии — отрезок в пол ребра едет по линии за 0.8 с ----------
 const int slowSeq[9] = {0,1,2,3,4,3,2,1,0}; // индексы в pairSeq, вперёд и назад
+// true = пиксели ленты на этом ребре идут "справа налево" / "снизу вверх" (B->A).
+// Определено по цепочке подключения рёбер; для рёбер 8 и 15 (концы перемычек) — по умолчанию false.
+// Индекс = номер ребра (1..22), нулевой элемент не используется.
+const bool EDGE_PIX_BA[23] = {
+  false,
+  false, false, true,  true,  false,   // 1-5
+  true,  true,  false, true,  true,    // 6-10
+  true,  false, false, false, false,   // 11-15
+  true,  false, false, true,  false,   // 16-20
+  false, true                          // 21-22
+};
 void prog11_slowpairs() {
   unsigned long now = millis();
-  if (subState == 0) { phaseStartMs = now; subState = 1; }
+  static PathStep path[2];
+  if (subState == 0) {
+    int pi = slowSeq[state];
+    bool ltr = (state <= 4); // вперёд (снизу вверх по раме) — слева направо, обратно — справа налево
+    int eL = pairSeq[pi][0], eR = pairSeq[pi][1];
+    if (ltr) {
+      path[0].edge = eL; path[0].rev = EDGE_PIX_BA[eL];
+      path[1].edge = eR; path[1].rev = EDGE_PIX_BA[eR];
+    } else {
+      path[0].edge = eR; path[0].rev = !EDGE_PIX_BA[eR];
+      path[1].edge = eL; path[1].rev = !EDGE_PIX_BA[eL];
+    }
+    phaseStartMs = now; subState = 1;
+  }
   if (subState == 1) {
     unsigned long dur = T(800);
     unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    float frac = (float)elapsed/dur;
-    clearAll(); edgesSet(pairSeq[slowSeq[state]], 2, scaledColor((uint8_t)(255*frac)));
-    if (elapsed >= dur) { subState = 2; phaseStartMs = now; }
-  } else if (subState == 2) {
-    unsigned long dur = T(800);
-    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
-    float frac = (float)elapsed/dur;
-    clearAll(); edgesSet(pairSeq[slowSeq[state]], 2, scaledColor((uint8_t)(255*(1-frac))));
-    if (elapsed >= dur) { clearAll(); nextT = now + T(5000); subState = 3; }
-  } else if (subState == 3 && now >= nextT) {
+    clearAll();
+    drawMovingWindow(path, 2, (float)elapsed/dur);
+    if (elapsed >= dur) { clearAll(); nextT = now + T(5000); subState = 2; }
+  } else if (subState == 2 && now >= nextT) {
     state = (state+1) % 9;
     subState = 0;
   }
@@ -671,24 +687,91 @@ void prog16_half_segments() {
   }
 }
 
+// ---------- Периметр с плавным затуханием (как фаза 1 пресета "Марш фигур") ----------
+void prog_peri_fade() {
+  unsigned long now = millis();
+  if (subState == 0) { clearAll(); edgesSet(perimeterEdges, 12, currentColor); nextT = now + T(200); subState = 1; }
+  else if (subState == 1 && now >= nextT) { phaseStartMs = now; subState = 2; }
+  else if (subState == 2) {
+    unsigned long dur = T(1600);
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
+    uint8_t scale = 255 - (uint8_t)(255.0 * elapsed / dur);
+    clearAll(); edgesSet(perimeterEdges, 12, scaledColor(scale));
+    if (elapsed >= dur) { clearAll(); nextT = now + T(6000); subState = 3; }
+  } else if (subState == 3 && now >= nextT) { subState = 0; }
+}
+
+// ---------- Комбо 1+2: бегущая линия + удаление пар ----------
+// Порядок: линия ф1, линия ф2, пары ф1, линия ф3, линия ф4, пары ф2 — и по кругу.
+// Фазы бегущей линии идут по 3 повтора, как в обычном пресете.
+void prog_combo12() {
+  bool done;
+  switch (state) {
+    case 0: done = prog1_phase(0); break;
+    case 1: done = prog1_phase(1); break;
+    case 2: done = prog2_phase(0); break;
+    case 3: done = prog1_phase(2); break;
+    case 4: done = prog1_phase(3); break;
+    default: done = prog2_phase(1); break;
+  }
+  if (done) state = (state + 1) % 6;
+}
+
+// ---------- Комбо 3+5: случайно чередуются два типа вспышек ----------
+// Тип А (как пресет 3): случайная фигура, двойная резкая вспышка + быстрое затухание 0.3 с.
+// Тип Б (как пресет 5): случайный ряд/квадрат, одна резкая вспышка + медленное затухание 1.6 с.
+// Между вспышками 6 с.
+void prog_combo35() {
+  unsigned long now = millis();
+  static uint8_t buf[12]; static uint8_t len; static bool slowType;
+  if (subState == 0) {
+    slowType = (random(0,2) == 1);
+    if (slowType) {
+      int variant = random(0,3); // 0 = во всю ширину, 1 = квадрат справа, 2 = квадрат слева
+      int row = random(0,4);
+      buildRect(variant==0 ? 2 : (variant==1 ? 1 : 0), row, row, buf, len);
+    } else {
+      int colMode = random(0,3);
+      int rowStart = random(0,4);
+      int rowEnd = rowStart + random(0, 4-rowStart);
+      buildRect(colMode, rowStart, rowEnd, buf, len);
+    }
+    clearAll(); edgesSet(buf, len, currentColor);
+    nextT = now + (slowType ? T(200) : T(50)); subState = 1;
+  } else if (subState == 1 && now >= nextT) {
+    if (slowType) { phaseStartMs = now; subState = 5; }
+    else { clearAll(); nextT = now + T(50); subState = 2; }
+  } else if (subState == 2 && now >= nextT) { edgesSet(buf, len, currentColor); nextT = now + T(50); subState = 3; }
+  else if (subState == 3 && now >= nextT) { phaseStartMs = now; subState = 4; }
+  else if (subState == 4 || subState == 5) {
+    unsigned long dur = (subState == 5) ? T(1600) : T(300);
+    unsigned long elapsed = now - phaseStartMs; if (elapsed>dur) elapsed=dur;
+    uint8_t scale = 255 - (uint8_t)(255.0 * elapsed / dur);
+    clearAll(); edgesSet(buf, len, scaledColor(scale));
+    if (elapsed >= dur) { clearAll(); nextT = now + T(6000); subState = 6; }
+  } else if (subState == 6 && now >= nextT) { subState = 0; }
+}
+
 void runCurrentProgram() {
   switch (currentProg) {
+    case P_COMBO12: prog_combo12(); break;
+    case P_COMBO35: prog_combo35(); break;
+    case P10_MOVE_DOT: prog10_move_dot(); break;
+    case P7_DOTS: prog7_dots(); break;
+    case P11_SLOWPAIRS: prog11_slowpairs(); break;
+    case P8_DOTSHAPE: prog8_dotshape(); break;
+    case P15_DOTSHAPE_SINGLE: prog15_dotshape_single(); break;
+    case P_PERI_FADE: prog_peri_fade(); break;
+    case P16_HALF_SEG: prog16_half_segments(); break;
+    case P5_MARCH: prog5_march(); break;
     case P1_LINE: prog1_line(); break;
     case P2_PAIRS: prog2_pairs(); break;
+    case P6_LINES: prog6_lines(); break;
     case P3_RECTS: prog3_rects(); break;
     case P4_BROKEN: prog4_broken(); break;
-    case P5_MARCH: prog5_march(); break;
-    case P6_LINES: prog6_lines(); break;
-    case P7_DOTS: prog7_dots(); break;
-    case P8_DOTSHAPE: prog8_dotshape(); break;
-    case P9_DOTS_CONT: prog9_dots_cont(); break;
-    case P10_MOVE_DOT: prog10_move_dot(); break;
-    case P11_SLOWPAIRS: prog11_slowpairs(); break;
-    case P12_STROBE: prog12_strobe(); break;
-    case P13_STROBE_PERI: prog13_strobe_peri(); break;
     case P14_BROKEN_ALL: prog14_broken_all(); break;
-    case P15_DOTSHAPE_SINGLE: prog15_dotshape_single(); break;
-    case P16_HALF_SEG: prog16_half_segments(); break;
+    case P13_STROBE_PERI: prog13_strobe_peri(); break;
+    case P12_STROBE: prog12_strobe(); break;
     default: clearAll(); break;
   }
 }
@@ -729,22 +812,24 @@ h3{margin-top:28px}
 
 <h3>Программы</h3>
 <button onclick="prog(0)">Выключить</button>
-<button onclick="prog(1)">1. Бегущая линия</button>
-<button onclick="prog(2)">2. Удаление пар</button>
-<button onclick="prog(3)">3. Вспышки фигур</button>
-<button onclick="prog(4)">4. Ломаные фигуры</button>
-<button onclick="prog(5)">5. Марш фигур</button>
-<button onclick="prog(6)">6. Случайные линии</button>
-<button onclick="prog(7)">7. Случайные диоды</button>
-<button onclick="prog(8)">8. Диодные фигуры</button>
-<button onclick="prog(9)">9. Диоды постоянные</button>
-<button onclick="prog(10)">10. Движение диода</button>
-<button onclick="prog(11)">11. Медленные линии</button>
-<button onclick="prog(12)">12. Стробоскоп</button>
-<button onclick="prog(13)">13. Строб периметр</button>
-<button onclick="prog(14)">14. Ломаные (вся рама)</button>
-<button onclick="prog(15)">15. Диодные фигуры x1</button>
-<button onclick="prog(16)">16. Отрезки в пол ребра</button>
+<button onclick="prog(1)">1. Комбо: бегущая линия + удаление пар</button>
+<button onclick="prog(2)">2. Комбо: вспышки фигур + марш</button>
+<button onclick="prog(3)">3. Движение диодов</button>
+<button onclick="prog(4)">4. Случайные диоды</button>
+<button onclick="prog(5)">5. Медленные линии</button>
+<button onclick="prog(6)">6. Диодные фигуры</button>
+<button onclick="prog(7)">7. Диодные фигуры x1</button>
+<button onclick="prog(8)">8. Периметр с затуханием</button>
+<button onclick="prog(9)">9. Отрезки в пол ребра</button>
+<button onclick="prog(10)">10. Марш фигур</button>
+<button onclick="prog(11)">11. Бегущая линия</button>
+<button onclick="prog(12)">12. Удаление пар</button>
+<button onclick="prog(13)">13. Случайные линии</button>
+<button onclick="prog(14)">14. Вспышки фигур</button>
+<button onclick="prog(15)">15. Ломаные фигуры</button>
+<button onclick="prog(16)">16. Ломаные (вся рама)</button>
+<button onclick="prog(17)">17. Строб периметр</button>
+<button onclick="prog(18)">18. Стробоскоп</button>
 
 <script>
 function prog(n){ fetch('/prog?n='+n); }
@@ -802,6 +887,7 @@ void handleRoot() { server.send(200, "text/html", PAGE); }
 
 void handleProg() {
   int n = server.arg("n").toInt();
+  if (n < 0 || n > PROG_COUNT) n = 0;
   currentProg = (Prog)n;
   resetProgState();
   dotPoolInit = false;
